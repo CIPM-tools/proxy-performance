@@ -3,6 +3,10 @@ package proxy.test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.awt.Color;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.inference.TestUtils;
@@ -16,22 +20,28 @@ import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.knowm.xchart.CategoryChart;
 import org.knowm.xchart.CategoryChartBuilder;
 import org.knowm.xchart.Histogram;
-import org.knowm.xchart.SwingWrapper;
-import org.knowm.xchart.XYChart;
+import org.knowm.xchart.VectorGraphicsEncoder;
 import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.CategorySeries.CategorySeriesRenderStyle;
+import org.knowm.xchart.VectorGraphicsEncoder.VectorGraphicsFormat;
 import org.knowm.xchart.XYSeries.XYSeriesRenderStyle;
 import org.knowm.xchart.style.Styler.LegendPosition;
+
+import com.google.gson.Gson;
 
 import proxy.A;
 import proxy.ProxyFactory;
 
 public class ProxyTest {
+	private static record DeepResolutionResult(int hierarchyLength, double[] times, long creationTime) {};
 	private static record Stats(double mean, double std) {};
+	private static record RegressionResult(double intercept, double slope, double rSquare) {};
+	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes, Stats noProxyStats, Stats proxyStats, double pKS) {};
+	private static record DeepProxyResolutionResult(DeepResolutionResult[] times, RegressionResult regression) {};
 
+	private static final Path OUTPUT_PATH = Paths.get("target");
 	private static final int REPETITION_NO_PROXY_RESOLUTION = 10000000;
 	private static final int REPETITION_DEEP_PROXY_RESOLUTION = 10000;
 
@@ -52,7 +62,7 @@ public class ProxyTest {
 	}
 
 	@Test
-	public void testNoProxyResolution() {
+	public void testNoProxyResolution() throws IOException {
 		a.setNoProxyCon(a);
 		double[] noProxyMeasurements = new double[REPETITION_NO_PROXY_RESOLUTION];
 		a.setProxyNoCon(a);
@@ -91,16 +101,20 @@ public class ProxyTest {
 		chart.getStyler().setLegendPosition(LegendPosition.InsideNE);
 		chart.addSeries("No Proxy Resolution", hNoProxy.getxAxisData(), hNoProxy.getyAxisData()).setFillColor(new Color(0xaaffaa));
 		chart.addSeries("Proxy Resolution", hProxy.getxAxisData(), hProxy.getyAxisData()).setFillColor(new Color(0xaaaaff));
-		new SwingWrapper<CategoryChart>(chart).displayChart();
+		VectorGraphicsEncoder.saveVectorGraphic(chart, OUTPUT_PATH.resolve("no-proxy-resolution-histogram.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
+
+		// Store the results.
+		var result = new NoProxyResolutionResult(noProxyMeasurements, proxyMeasurements, noProxyStat, proxyStat, pKS);
+		Files.writeString(OUTPUT_PATH.resolve("no-proxy-resolution.json"), new Gson().toJson(result));
 		
 		System.out.println();
 	}
 
 	@Test
-	public void testDeepProxyResolution() {
+	public void testDeepProxyResolution() throws IOException {
 		int[] lengths = {0, 10, 100, 1000, 5000, 10000, 50000, 100000};
 
-		double[][] allTimes = new double[lengths.length][];
+		DeepResolutionResult[] allTimes = new DeepResolutionResult[lengths.length];
 		double[] maxValues = new double[lengths.length];
 
 		// Prepare a simple linear regression.
@@ -113,18 +127,19 @@ public class ProxyTest {
 		for (var j = 0; j < lengths.length; j++) {
 			int hierarchyLength = lengths[j];
 			allTimes[j] = executeDeepProxyResolution(hierarchyLength, REPETITION_DEEP_PROXY_RESOLUTION);
-			maxValues[j] = Arrays.stream(allTimes[j]).max().getAsDouble();
+			var times = allTimes[j].times();
+			maxValues[j] = Arrays.stream(times).max().getAsDouble();
 			
 			// Fill the scatter plot with the current measurements.
-			var xValues = new double[allTimes[j].length];
+			var xValues = new double[times.length];
 			Arrays.fill(xValues, hierarchyLength);
-			allPointsScatter.addSeries(hierarchyLength + " levels", xValues, allTimes[j]);
+			allPointsScatter.addSeries(hierarchyLength + " levels", xValues, times);
 
 			// Update the regression.
-			Arrays.stream(allTimes[j]).forEach(d -> regression.addData(hierarchyLength, d));
+			Arrays.stream(times).forEach(d -> regression.addData(hierarchyLength, d));
 
 			// Calculate descriptive statistics.
-			var stats = calculateStats(allTimes[j]);
+			var stats = calculateStats(times);
 			System.out.println("Deep resolution time: " + stats.mean() + " ns (std. " + stats.std() + " ns) for " + hierarchyLength + " levels");
 		}
 
@@ -138,10 +153,10 @@ public class ProxyTest {
 		});
 		var histogramMax = Arrays.stream(maxValues).max().getAsDouble() * 0.1;
 		for (var idx = 0; idx < lengths.length; idx++) {
-			var h = new Histogram(Arrays.stream(allTimes[idx]).mapToObj(d -> d).toList(), 20, 0, histogramMax);
+			var h = new Histogram(Arrays.stream(allTimes[idx].times()).mapToObj(d -> d).toList(), 20, 0, histogramMax);
 			timeHistogram.addSeries(lengths[idx] + " levels", h.getxAxisData(), h.getyAxisData());
 		}
-		new SwingWrapper<CategoryChart>(timeHistogram).displayChart();
+		VectorGraphicsEncoder.saveVectorGraphic(timeHistogram, OUTPUT_PATH.resolve("deep-resolution-histogram.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
 
 		// Finish the scatter plot with all measurements and the regression line.
 		double[] regY = new double[lengths.length];
@@ -150,12 +165,16 @@ public class ProxyTest {
 		}
 		var regSeries = allPointsScatter.addSeries("Regression Line (r² = " + regression.getRSquare() + ")", Arrays.stream(lengths).mapToDouble(i -> i).toArray(), regY);
 		regSeries.setXYSeriesRenderStyle(XYSeriesRenderStyle.Line);
-		new SwingWrapper<XYChart>(allPointsScatter).displayChart();
+		VectorGraphicsEncoder.saveVectorGraphic(allPointsScatter, OUTPUT_PATH.resolve("deep-resolution-scatter.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
+
+		// Store the results.
+		var result = new DeepProxyResolutionResult(allTimes, new RegressionResult(regression.getIntercept(), regression.getSlope(), regression.getRSquare()));
+		Files.writeString(OUTPUT_PATH.resolve("deep-proxy-resolution.json"), new Gson().toJson(result));
 
 		System.out.println();
 	}
 
-	private double[] executeDeepProxyResolution(int hierarchyLength, int repetitions) {
+	private DeepResolutionResult executeDeepProxyResolution(int hierarchyLength, int repetitions) {
 		var millis = System.currentTimeMillis();
 		var currentA = a;
 		for (var idx = 0; idx < hierarchyLength; idx++) {
@@ -163,7 +182,8 @@ public class ProxyTest {
 			currentA.setNoProxyCon(nextA);
 			currentA = nextA;
 		}
-		System.out.println("Time for level creation: " + (System.currentTimeMillis() - millis) + " ms");
+		millis = System.currentTimeMillis() - millis;
+		System.out.println("Time for level creation: " + millis + " ms");
 
 		var uri = EcoreUtil.getURI(currentA);
 		var proxyA = ProxyFactory.eINSTANCE.createA();
@@ -178,7 +198,7 @@ public class ProxyTest {
 			assertEquals(currentA, b);
 		}
 
-		return resolutionTimes;
+		return new DeepResolutionResult(hierarchyLength, resolutionTimes, millis);
 	}
 
 	private Stats calculateStats(double[] values) {
