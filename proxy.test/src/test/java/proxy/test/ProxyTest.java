@@ -1,6 +1,7 @@
 package proxy.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.awt.Color;
 import java.io.IOException;
@@ -9,7 +10,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import org.apache.commons.math3.stat.StatUtils;
-import org.apache.commons.math3.stat.inference.TestUtils;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.impl.MinimalEObjectImpl;
@@ -35,15 +35,15 @@ import proxy.A;
 import proxy.ProxyFactory;
 
 public class ProxyTest {
-	private static record DeepResolutionResult(int hierarchyLength, double[] times, long creationTime) {};
+	private static record ResolutionResult(int hierarchyLength, double[] times, long creationTime) {};
 	private static record Stats(double mean, double std) {};
 	private static record RegressionResult(double intercept, double slope, double rSquare) {};
-	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes, Stats noProxyStats, Stats proxyStats, double pKS) {};
-	private static record DeepProxyResolutionResult(DeepResolutionResult[] times, RegressionResult regression) {};
+	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes, Stats noProxyStats, Stats proxyStats) {};
+	private static record ProxyResolutionResult(ResolutionResult[] times, RegressionResult regression, boolean unresolvable) {};
 
 	private static final Path OUTPUT_PATH = Paths.get("target");
 	private static final int REPETITION_NO_PROXY_RESOLUTION = 10000000;
-	private static final int REPETITION_DEEP_PROXY_RESOLUTION = 10000;
+	private static final int REPETITION_PROXY_RESOLUTION = 10000;
 
 	private Resource aResource;
 	private A a;
@@ -87,10 +87,6 @@ public class ProxyTest {
 		System.out.format("With proxy resolution: %f ns (std. %f ns), Without proxy resolution: %f ns (std. %f ns)%n",
 			proxyStat.mean(), proxyStat.std(), noProxyStat.mean(), noProxyStat.std());
 
-		// Perform a KS test.
-		var pKS = TestUtils.kolmogorovSmirnovStatistic(noProxyMeasurements, proxyMeasurements);
-		System.out.println("No proxy / proxy KS p value: " + pKS);
-
 		// Create a histogram for the data.
 		var noBins = 10;
 		var max = 500;
@@ -104,7 +100,7 @@ public class ProxyTest {
 		VectorGraphicsEncoder.saveVectorGraphic(chart, OUTPUT_PATH.resolve("no-proxy-resolution-histogram.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
 
 		// Store the results.
-		var result = new NoProxyResolutionResult(noProxyMeasurements, proxyMeasurements, noProxyStat, proxyStat, pKS);
+		var result = new NoProxyResolutionResult(noProxyMeasurements, proxyMeasurements, noProxyStat, proxyStat);
 		Files.writeString(OUTPUT_PATH.resolve("no-proxy-resolution.json"), new Gson().toJson(result));
 		
 		System.out.println();
@@ -112,9 +108,26 @@ public class ProxyTest {
 
 	@Test
 	public void testDeepProxyResolution() throws IOException {
+		executeProxyResolutionAndEvaluate(false, "deep-resolution");
+		System.out.println();
+	}
+
+	@Test
+	public void testUnresolvableProxyResolution() throws IOException {
+		executeProxyResolutionAndEvaluate(true, "unresolvable");
+
+		for (var idx = 0; idx < 2; idx++) {
+			executeUnresolvableProxyResolutionWithArbitraryUri(REPETITION_PROXY_RESOLUTION*10, "models://B.json");
+			executeUnresolvableProxyResolutionWithArbitraryUri(REPETITION_PROXY_RESOLUTION*10, "models://C.java#//@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon/@noProxyCon");
+		}
+
+		System.out.println();
+	}
+
+	private void executeProxyResolutionAndEvaluate(boolean unresolvable, String outputPrefix) throws IOException {
 		int[] lengths = {0, 10, 100, 1000, 5000, 10000, 50000, 100000};
 
-		DeepResolutionResult[] allTimes = new DeepResolutionResult[lengths.length];
+		ResolutionResult[] allTimes = new ResolutionResult[lengths.length];
 		double[] maxValues = new double[lengths.length];
 
 		// Prepare a simple linear regression.
@@ -126,7 +139,7 @@ public class ProxyTest {
 		// Perform the actual measurements.
 		for (var j = 0; j < lengths.length; j++) {
 			int hierarchyLength = lengths[j];
-			allTimes[j] = executeDeepProxyResolution(hierarchyLength, REPETITION_DEEP_PROXY_RESOLUTION);
+			allTimes[j] = executeDeepProxyResolution(hierarchyLength, REPETITION_PROXY_RESOLUTION, unresolvable);
 			var times = allTimes[j].times();
 			maxValues[j] = Arrays.stream(times).max().getAsDouble();
 			
@@ -140,7 +153,7 @@ public class ProxyTest {
 
 			// Calculate descriptive statistics.
 			var stats = calculateStats(times);
-			System.out.println("Deep resolution time: " + stats.mean() + " ns (std. " + stats.std() + " ns) for " + hierarchyLength + " levels");
+			System.out.println("Deep resolution time (unresolvable: " + unresolvable + "): " + stats.mean() + " ns (std. " + stats.std() + " ns) for " + hierarchyLength + " levels");
 		}
 
 		System.out.format("Regression: y = %f * x + %f (%f)%n", regression.getSlope(), regression.getIntercept(), regression.getRSquare());
@@ -156,7 +169,7 @@ public class ProxyTest {
 			var h = new Histogram(Arrays.stream(allTimes[idx].times()).mapToObj(d -> d).toList(), 20, 0, histogramMax);
 			timeHistogram.addSeries(lengths[idx] + " levels", h.getxAxisData(), h.getyAxisData());
 		}
-		VectorGraphicsEncoder.saveVectorGraphic(timeHistogram, OUTPUT_PATH.resolve("deep-resolution-histogram.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
+		VectorGraphicsEncoder.saveVectorGraphic(timeHistogram, OUTPUT_PATH.resolve(outputPrefix + "-histogram.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
 
 		// Finish the scatter plot with all measurements and the regression line.
 		double[] regY = new double[lengths.length];
@@ -165,16 +178,14 @@ public class ProxyTest {
 		}
 		var regSeries = allPointsScatter.addSeries("Regression Line (r² = " + regression.getRSquare() + ")", Arrays.stream(lengths).mapToDouble(i -> i).toArray(), regY);
 		regSeries.setXYSeriesRenderStyle(XYSeriesRenderStyle.Line);
-		VectorGraphicsEncoder.saveVectorGraphic(allPointsScatter, OUTPUT_PATH.resolve("deep-resolution-scatter.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
+		VectorGraphicsEncoder.saveVectorGraphic(allPointsScatter, OUTPUT_PATH.resolve(outputPrefix + "-scatter.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
 
 		// Store the results.
-		var result = new DeepProxyResolutionResult(allTimes, new RegressionResult(regression.getIntercept(), regression.getSlope(), regression.getRSquare()));
-		Files.writeString(OUTPUT_PATH.resolve("deep-proxy-resolution.json"), new Gson().toJson(result));
-
-		System.out.println();
+		var result = new ProxyResolutionResult(allTimes, new RegressionResult(regression.getIntercept(), regression.getSlope(), regression.getRSquare()), unresolvable);
+		Files.writeString(OUTPUT_PATH.resolve(outputPrefix + ".json"), new Gson().toJson(result));
 	}
 
-	private DeepResolutionResult executeDeepProxyResolution(int hierarchyLength, int repetitions) {
+	private ResolutionResult executeDeepProxyResolution(int hierarchyLength, int repetitions, boolean unresolvable) {
 		var millis = System.currentTimeMillis();
 		var currentA = a;
 		for (var idx = 0; idx < hierarchyLength; idx++) {
@@ -186,19 +197,44 @@ public class ProxyTest {
 		System.out.println("Time for level creation: " + millis + " ms");
 
 		var uri = EcoreUtil.getURI(currentA);
+		if (unresolvable) {
+			uri = uri.appendFragment(uri.fragment() + "a");
+		}
 		var proxyA = ProxyFactory.eINSTANCE.createA();
 		((MinimalEObjectImpl) proxyA).eSetProxyURI(uri);
 
-		double[] resolutionTimes = new double[REPETITION_DEEP_PROXY_RESOLUTION];
-		for (var idx = 0; idx < REPETITION_DEEP_PROXY_RESOLUTION; idx++) {
+		double[] resolutionTimes = new double[repetitions];
+		for (var idx = 0; idx < repetitions; idx++) {
 			a.setProxyNoCon(proxyA);
 			var nanos = System.nanoTime();
 			var b = a.getProxyNoCon();
 			resolutionTimes[idx] = System.nanoTime() - nanos;
-			assertEquals(currentA, b);
+			if (unresolvable) {
+				assertTrue(b.eIsProxy());
+			} else {
+				assertEquals(currentA, b);
+			}
 		}
 
-		return new DeepResolutionResult(hierarchyLength, resolutionTimes, millis);
+		return new ResolutionResult(hierarchyLength, resolutionTimes, millis);
+	}
+
+	private void executeUnresolvableProxyResolutionWithArbitraryUri(int repetitions, String uri) {
+		var proxyA = ProxyFactory.eINSTANCE.createA();
+		((MinimalEObjectImpl) proxyA).eSetProxyURI(URI.createURI(uri));
+		a.setProxyNoCon(proxyA);
+
+		var times = new double[repetitions];
+
+		for (var idx = 0; idx < repetitions; idx++) {
+			var nanos = System.nanoTime();
+			var b = a.getProxyNoCon();
+			times[idx] = System.nanoTime() - nanos;
+			assertTrue(b.eIsProxy());
+		}
+
+		var stats = calculateStats(times);
+		System.out.format("Unresolvable: %f ns (std. %f ns) for %s%n", stats.mean(), stats.std(), uri);
 	}
 
 	private Stats calculateStats(double[] values) {
