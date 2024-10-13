@@ -24,6 +24,7 @@ import com.google.gson.Gson;
 
 import proxy.A;
 import proxy.ProxyFactory;
+import proxy.test.data.MinMax;
 import proxy.test.data.ProxyResolutionResult;
 import proxy.test.data.ResolutionResult;
 
@@ -122,6 +123,10 @@ public final class ProxyResolutionUtility {
 			}
 		}
 
-		return new ResolutionResult(hierarchyLength, resolutionTimes, millis);
+		return new ResolutionResult(hierarchyLength, resolutionTimes, millis, calculateMinMax(resolutionTimes));
+	}
+
+	private static MinMax calculateMinMax(double[] data) {
+		return new MinMax(Arrays.stream(data).min().getAsDouble(), Arrays.stream(data).max().getAsDouble());
 	}
 }
