@@ -1,4 +1,4 @@
-package proxy.test;
+package proxy.test.utility;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -14,6 +14,10 @@ public final class ModelGenerator {
 	private static ResourceSet internalTestSet = new ResourceSetImpl();
 
     private ModelGenerator() {}
+
+	public static void resetResourceSet() {
+		internalTestSet = new ResourceSetImpl();
+	}
 
 	public static ResourceCreationResult createResource(URI uri) {
 		var aResource = internalTestSet.createResource(uri);
@@ -43,4 +47,14 @@ public final class ModelGenerator {
         }
         return no;
     }
+
+	public static A createLinearModel(A root, int length) {
+		var currentA = root;
+		for (var idx = 0; idx < length; idx++) {
+			var nextA = ProxyFactory.eINSTANCE.createA();
+			currentA.setNoProxyCon(nextA);
+			currentA = nextA;
+		}
+		return currentA;
+	}
 }

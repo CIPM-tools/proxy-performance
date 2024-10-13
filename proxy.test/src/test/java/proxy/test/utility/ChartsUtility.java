@@ -1,4 +1,4 @@
-package proxy.test;
+package proxy.test.utility;
 
 import java.io.IOException;
 import java.nio.file.Path;

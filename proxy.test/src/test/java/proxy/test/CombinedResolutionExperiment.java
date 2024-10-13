@@ -16,19 +16,22 @@ import com.google.gson.Gson;
 
 import proxy.ProxyFactory;
 import proxy.test.data.ModelLoadResult;
+import proxy.test.utility.ChartsUtility;
+import proxy.test.utility.ModelGenerator;
+import proxy.test.utility.TestUtility;
 
 public class CombinedResolutionExperiment {
     private static final int REPETITION_COMBINED_RESOLUTION = 100;
 
 	@BeforeAll
 	public static void initialize() {
-		ProxyTest.initialize();
+		TestUtility.initialize();
 	}
 
     @Test
 	public void measureCombinedProxyResolution() throws IOException {
         System.out.println("Combined proxy resolution");
-        var outputDir = ProxyTest.OUTPUT_PATH.resolve("combined-resolution");
+        var outputDir = TestUtility.OUTPUT_PATH.resolve("combined-resolution");
         Files.createDirectories(outputDir);
 		int[] levels = {0, 8, 15, 18};
 		ModelLoadResult[] result = new ModelLoadResult[levels.length];
@@ -62,7 +65,7 @@ public class CombinedResolutionExperiment {
                 assertFalse(resolved.eIsProxy());
 			}
 
-			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, ProxyTest.calculateStats(times));
+			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, TestUtility.calculateStats(times));
 		}
 
 		Files.writeString(outputDir.resolve("combined-resolution.json"), new Gson().toJson(result));

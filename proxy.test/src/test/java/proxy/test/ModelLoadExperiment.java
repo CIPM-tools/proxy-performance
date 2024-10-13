@@ -11,19 +11,22 @@ import org.junit.jupiter.api.Test;
 import com.google.gson.Gson;
 
 import proxy.test.data.ModelLoadResult;
+import proxy.test.utility.ChartsUtility;
+import proxy.test.utility.ModelGenerator;
+import proxy.test.utility.TestUtility;
 
 public class ModelLoadExperiment {
 	private static final int REPETITION_MODEL_LOAD = 100;
 
 	@BeforeAll
 	public static void initialize() {
-		ProxyTest.initialize();
+		TestUtility.initialize();
 	}
 
     @Test
 	public void measureModelLoad() throws IOException {
 		System.out.println("Model Load");
-		var outputDir = ProxyTest.OUTPUT_PATH.resolve("model-load");
+		var outputDir = TestUtility.OUTPUT_PATH.resolve("model-load");
 		Files.createDirectories(outputDir);
 		int[] levels = {0, 15, 18, 20};
 		ModelLoadResult[] result = new ModelLoadResult[levels.length];
@@ -50,7 +53,7 @@ public class ModelLoadExperiment {
 				times[repetition] = System.currentTimeMillis() - millis;
 			}
 
-			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, ProxyTest.calculateStats(times));
+			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, TestUtility.calculateStats(times));
 		}
 
 		Files.writeString(outputDir.resolve("model-load.json"), new Gson().toJson(result));
