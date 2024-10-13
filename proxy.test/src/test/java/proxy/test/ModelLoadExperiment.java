@@ -10,11 +10,9 @@ import org.junit.jupiter.api.Test;
 
 import com.google.gson.Gson;
 
-import proxy.test.ProxyTest.Stats;
+import proxy.test.data.ModelLoadResult;
 
 public class ModelLoadExperiment {
-	private static record ModelLoadResult(int noLevels, long noElements, long modelSize, double[] times, Stats stats) {};
-
 	private static final int REPETITION_MODEL_LOAD = 100;
 
 	@BeforeAll
