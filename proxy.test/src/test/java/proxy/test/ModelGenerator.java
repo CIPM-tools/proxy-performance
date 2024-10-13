@@ -1,10 +1,26 @@
 package proxy.test;
 
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+
 import proxy.A;
 import proxy.ProxyFactory;
 
 public final class ModelGenerator {
+	public static record ResourceCreationResult(Resource resource, A root) {};
+
+	private static ResourceSet internalTestSet = new ResourceSetImpl();
+
     private ModelGenerator() {}
+
+	public static ResourceCreationResult createResource(URI uri) {
+		var aResource = internalTestSet.createResource(uri);
+		var a = ProxyFactory.eINSTANCE.createA();
+		aResource.getContents().add(a);
+		return new ResourceCreationResult(aResource, a);
+    }
 
     public static A createExponentiallyGrowingModel(A root, int level) {
 		var nextAOne = ProxyFactory.eINSTANCE.createA();
@@ -20,7 +36,7 @@ public final class ModelGenerator {
 		}
 	}
 
-    public long calculateNumberOfElements(int level) {
+    public static long calculateNumberOfElements(int level) {
         long no = 1;
         for (int idx = 1; idx <= level + 1; idx++) {
             no += Math.pow(2, idx);

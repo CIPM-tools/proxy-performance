@@ -36,12 +36,12 @@ import proxy.ProxyFactory;
 
 public class ProxyTest {
 	private static record ResolutionResult(int hierarchyLength, double[] times, long creationTime) {};
-	private static record Stats(double mean, double std) {};
+	public static record Stats(double mean, double std) {};
 	private static record RegressionResult(double intercept, double slope, double rSquare) {};
 	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes, Stats noProxyStats, Stats proxyStats) {};
 	private static record ProxyResolutionResult(ResolutionResult[] times, RegressionResult regression, boolean unresolvable) {};
 
-	private static final Path OUTPUT_PATH = Paths.get("target");
+	public static final Path OUTPUT_PATH = Paths.get("target");
 	private static final int REPETITION_NO_PROXY_RESOLUTION = 10000000;
 	private static final int REPETITION_PROXY_RESOLUTION = 10000;
 
@@ -237,7 +237,7 @@ public class ProxyTest {
 		System.out.format("Unresolvable: %f ns (std. %f ns) for %s%n", stats.mean(), stats.std(), uri);
 	}
 
-	private Stats calculateStats(double[] values) {
+	public static Stats calculateStats(double[] values) {
 		return new Stats(StatUtils.mean(values), Math.sqrt(StatUtils.variance(values)));
 	}
 }
