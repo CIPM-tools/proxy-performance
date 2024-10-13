@@ -36,7 +36,7 @@ public final class ProxyResolutionUtility {
         var rootA = ModelGenerator.createResource(URI.createURI("model://a.xmi")).root();
         var outputDir = TestUtility.OUTPUT_PATH.resolve(outputPrefix);
         Files.createDirectories(outputDir);
-		int[] lengths = {0, 10, 100, 1000, 5000, 10000, 50000, 100000};
+		int[] lengths = {0, 2, 10, 17, 20, 100, 1000, 5000, 10000, 50000, 100000};
 
 		ResolutionResult[] allTimes = new ResolutionResult[lengths.length];
 		double[] maxValues = new double[lengths.length];

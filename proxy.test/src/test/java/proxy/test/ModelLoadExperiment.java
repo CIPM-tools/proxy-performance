@@ -28,7 +28,7 @@ public class ModelLoadExperiment {
 		System.out.println("Model Load");
 		var outputDir = TestUtility.OUTPUT_PATH.resolve("model-load");
 		Files.createDirectories(outputDir);
-		int[] levels = {0, 15, 18, 20};
+		int[] levels = {0, 8, 15, 18, 20};
 		ModelLoadResult[] result = new ModelLoadResult[levels.length];
 
 		for (int idx = 0; idx < levels.length; idx++) {
