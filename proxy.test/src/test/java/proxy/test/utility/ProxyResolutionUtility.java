@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.impl.MinimalEObjectImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
@@ -42,8 +41,6 @@ public final class ProxyResolutionUtility {
 		ResolutionResult[] allTimes = new ResolutionResult[lengths.length];
 		double[] maxValues = new double[lengths.length];
 
-		// Prepare a simple linear regression.
-		var regression = new SimpleRegression();
 		// Prepare a scatter plot with all measurements.
 		var allPointsScatter = new XYChartBuilder().title("Measurements (with Regression)").xAxisTitle("# Levels").yAxisTitle("Time (ns)").build();
 		allPointsScatter.getStyler().setDefaultSeriesRenderStyle(XYSeriesRenderStyle.Scatter).setLegendPosition(LegendPosition.InsideNE);
@@ -59,16 +56,7 @@ public final class ProxyResolutionUtility {
 			var xValues = new double[times.length];
 			Arrays.fill(xValues, hierarchyLength);
 			allPointsScatter.addSeries(hierarchyLength + " levels", xValues, times);
-
-			// Update the regression.
-			Arrays.stream(times).forEach(d -> regression.addData(hierarchyLength, d));
-
-			// Calculate descriptive statistics.
-			var stats = TestUtility.calculateStats(times);
-			System.out.println("Resolution time (unresolvable: " + unresolvable + "): " + stats.mean() + " ns (std. " + stats.std() + " ns) for " + hierarchyLength + " levels");
 		}
-
-		System.out.format("Regression: y = %f * x + %f (%f)%n", regression.getSlope(), regression.getIntercept(), regression.getRSquare());
 
 		// Create a histogram for all measurements.
 		var timeHistogram = new CategoryChartBuilder().title("Histogram").xAxisTitle("Time (ms)").yAxisTitle("# Measurements").build();
@@ -83,13 +71,7 @@ public final class ProxyResolutionUtility {
 		}
 		VectorGraphicsEncoder.saveVectorGraphic(timeHistogram, outputDir.resolve(outputPrefix + "-histogram.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
 
-		// Finish the scatter plot with all measurements and the regression line.
-		// double[] regY = new double[lengths.length];
-		// for (var idx = 0; idx < lengths.length; idx++) {
-		// 	regY[idx] = regression.getIntercept() + regression.getSlope() * (double) lengths[idx];
-		// }
-		// var regSeries = allPointsScatter.addSeries("Regression Line (r² = " + regression.getRSquare() + ")", Arrays.stream(lengths).mapToDouble(i -> i).toArray(), regY);
-		// regSeries.setXYSeriesRenderStyle(XYSeriesRenderStyle.Line);
+		// Finish the scatter plot with all measurements.
 		VectorGraphicsEncoder.saveVectorGraphic(allPointsScatter, outputDir.resolve(outputPrefix + "-scatter.pdf").toAbsolutePath().toString(), VectorGraphicsFormat.PDF);
 
 		// Store the results.

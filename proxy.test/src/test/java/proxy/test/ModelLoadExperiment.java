@@ -53,7 +53,7 @@ public class ModelLoadExperiment {
 				times[repetition] = System.currentTimeMillis() - millis;
 			}
 
-			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, TestUtility.calculateStats(times));
+			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times);
 		}
 
 		Files.writeString(outputDir.resolve("model-load.json"), new Gson().toJson(result));

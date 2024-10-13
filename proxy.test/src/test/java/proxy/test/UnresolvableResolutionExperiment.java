@@ -13,13 +13,12 @@ import org.junit.jupiter.api.Test;
 import com.google.gson.Gson;
 
 import proxy.ProxyFactory;
-import proxy.test.data.Stats;
 import proxy.test.utility.ModelGenerator;
 import proxy.test.utility.ProxyResolutionUtility;
 import proxy.test.utility.TestUtility;
 
 public class UnresolvableResolutionExperiment {
-    private static record UnresolvableUriResolutionResult(String uri, double[] times, Stats stats) {};
+    private static record UnresolvableUriResolutionResult(String uri, double[] times) {};
 
     @BeforeAll
     public static void initialize() {
@@ -56,9 +55,6 @@ public class UnresolvableResolutionExperiment {
 			assertTrue(b.eIsProxy());
 		}
 
-		var stats = TestUtility.calculateStats(times);
-		System.out.format("Unresolvable: %f ns (std. %f ns) for %s%n", stats.mean(), stats.std(), uri);
-
-        return new UnresolvableUriResolutionResult(uri, times, stats);
+        return new UnresolvableUriResolutionResult(uri, times);
 	}
 }

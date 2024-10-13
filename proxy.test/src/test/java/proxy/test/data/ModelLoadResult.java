@@ -1,4 +1,4 @@
 package proxy.test.data;
 
-public record ModelLoadResult(int noLevels, long noElements, long modelSize, double[] times, Stats stats) {
+public record ModelLoadResult(int noLevels, long noElements, long modelSize, double[] times) {
 }

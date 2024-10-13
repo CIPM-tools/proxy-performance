@@ -18,12 +18,11 @@ import org.knowm.xchart.style.Styler.LegendPosition;
 
 import com.google.gson.Gson;
 
-import proxy.test.data.Stats;
 import proxy.test.utility.ModelGenerator;
 import proxy.test.utility.TestUtility;
 
 public class NoProxyExperiment {
-	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes, Stats noProxyStats, Stats proxyStats) {};
+	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes) {};
 
 	private static final int REPETITION_NO_PROXY_RESOLUTION = 10000000;
 
@@ -55,16 +54,10 @@ public class NoProxyExperiment {
 			assertEquals(a, b);
 		}
 
-		// Calculate descriptive statistics.
-		var proxyStat = TestUtility.calculateStats(proxyMeasurements);
-		var noProxyStat = TestUtility.calculateStats(noProxyMeasurements);
-		System.out.format("With proxy resolution: %f ns (std. %f ns), Without proxy resolution: %f ns (std. %f ns)%n",
-			proxyStat.mean(), proxyStat.std(), noProxyStat.mean(), noProxyStat.std());
-
         // Store the results.
         var outputDir = TestUtility.OUTPUT_PATH.resolve("no-proxy");
         Files.createDirectories(outputDir);
-        var result = new NoProxyResolutionResult(noProxyMeasurements, proxyMeasurements, noProxyStat, proxyStat);
+        var result = new NoProxyResolutionResult(noProxyMeasurements, proxyMeasurements);
         Files.writeString(outputDir.resolve("no-proxy-resolution.json"), new Gson().toJson(result));
 
 		// Create a histogram for the data.

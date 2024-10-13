@@ -65,7 +65,7 @@ public class CombinedResolutionExperiment {
                 assertFalse(resolved.eIsProxy());
 			}
 
-			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, TestUtility.calculateStats(times));
+			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times);
 		}
 
 		Files.writeString(outputDir.resolve("combined-resolution.json"), new Gson().toJson(result));
