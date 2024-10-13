@@ -22,6 +22,9 @@ public class ModelLoadExperiment {
 
     @Test
 	public void measureModelLoad() throws IOException {
+		System.out.println("Model Load");
+		var outputDir = ProxyTest.OUTPUT_PATH.resolve("model-load");
+		Files.createDirectories(outputDir);
 		int[] levels = {0, 15, 18, 20};
 		ModelLoadResult[] result = new ModelLoadResult[levels.length];
 
@@ -29,7 +32,8 @@ public class ModelLoadExperiment {
 			long noElements = ModelGenerator.calculateNumberOfElements(levels[idx]);
 			System.out.format("Starting with %d elements%n", noElements);
 
-			var resourceContainer = ModelGenerator.createResource(URI.createFileURI(ProxyTest.OUTPUT_PATH.resolve("a-" + noElements + ".xmi").toAbsolutePath().toString()));
+			var resourceContainer = ModelGenerator.createResource(
+				URI.createFileURI(outputDir.resolve("a-" + noElements + ".xmi").toString()));
 			ModelGenerator.createExponentiallyGrowingModel(resourceContainer.root(), levels[idx]);
 			
 			var res = resourceContainer.resource();
@@ -49,6 +53,7 @@ public class ModelLoadExperiment {
 			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, ProxyTest.calculateStats(times));
 		}
 
-		Files.writeString(ProxyTest.OUTPUT_PATH.resolve("model-load.json"), new Gson().toJson(result));
+		Files.writeString(outputDir.resolve("model-load.json"), new Gson().toJson(result));
+		ChartsUtility.createChartsForModelLoadResult(result, outputDir);
 	}
 }

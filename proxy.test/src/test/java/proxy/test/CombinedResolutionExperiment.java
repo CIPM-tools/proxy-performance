@@ -28,6 +28,8 @@ public class CombinedResolutionExperiment {
     @Test
 	public void measureCombinedProxyResolution() throws IOException {
         System.out.println("Combined proxy resolution");
+        var outputDir = ProxyTest.OUTPUT_PATH.resolve("combined-resolution");
+        Files.createDirectories(outputDir);
 		int[] levels = {0, 8, 15, 18};
 		ModelLoadResult[] result = new ModelLoadResult[levels.length];
         var resolutionContainer = ModelGenerator.createResource(URI.createURI("model://ac.xmi"));
@@ -37,7 +39,7 @@ public class CombinedResolutionExperiment {
 			System.out.format("Starting with %d elements.%n", noElements);
 
 			var resourceContainer = ModelGenerator.createResource(
-                URI.createFileURI(ProxyTest.OUTPUT_PATH.resolve("ac-" + noElements + ".xmi").toString()));
+                URI.createFileURI(outputDir.resolve("ac-" + noElements + ".xmi").toString()));
 			var lastElement = ModelGenerator.createExponentiallyGrowingModel(resourceContainer.root(), levels[idx]);
 
             var res = resourceContainer.resource();
@@ -63,6 +65,7 @@ public class CombinedResolutionExperiment {
 			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times, ProxyTest.calculateStats(times));
 		}
 
-		Files.writeString(ProxyTest.OUTPUT_PATH.resolve("combined-resolution.json"), new Gson().toJson(result));
+		Files.writeString(outputDir.resolve("combined-resolution.json"), new Gson().toJson(result));
+        ChartsUtility.createChartsForModelLoadResult(result, outputDir);
 	}
 }
