@@ -48,9 +48,9 @@ public class ModelLoadExperiment {
 			for (int repetition = 0; repetition < times.length; repetition++) {
 				System.out.format("Repetition %d (%d elements)%n", repetition, noElements);
 				res.unload();
-				long millis = System.currentTimeMillis();
+				long nanos = System.nanoTime();
 				res.load(null);
-				times[repetition] = System.currentTimeMillis() - millis;
+				times[repetition] = System.nanoTime() - nanos;
 			}
 
 			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times);

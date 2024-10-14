@@ -59,9 +59,9 @@ public class CombinedResolutionExperiment {
 				res.unload();
                 resolutionContainer.root().setProxyNoCon(proxyA);
 
-				long millis = System.currentTimeMillis();
+				long nanos = System.nanoTime();
 				var resolved = resolutionContainer.root().getProxyNoCon();
-				times[repetition] = System.currentTimeMillis() - millis;
+				times[repetition] = System.nanoTime() - nanos;
                 assertFalse(resolved.eIsProxy());
 			}
 
