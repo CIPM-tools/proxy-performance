@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Test;
 import proxy.test.utility.ProxyResolutionUtility;
 import proxy.test.utility.TestUtility;
 
+/**
+ * This experiment measures the performance for searching an element within a model.
+ */
 public class DeepResolutionExperiment {
     @BeforeAll
     public static void initialize() {

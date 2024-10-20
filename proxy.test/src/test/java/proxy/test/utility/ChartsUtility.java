@@ -24,11 +24,5 @@ public final class ChartsUtility {
         chart.addSeries("# Model Elements", xValues, Stream.of(results).mapToDouble((r) -> r.noElements()).toArray());
         VectorGraphicsEncoder.saveVectorGraphic(chart, rootOutput.resolve("sizes.pdf").toAbsolutePath().toString(),
             VectorGraphicsFormat.PDF);
-
-        // chart = new XYChartBuilder().title("Time").xAxisTitle("# Levels").yAxisTitle("Average Time (ms)").build();
-        // chart.getStyler().setDefaultSeriesRenderStyle(XYSeriesRenderStyle.Line).setLegendVisible(false);
-        // chart.addSeries("Average Time", xValues, Stream.of(results).mapToDouble((r) -> r.stats().mean()).toArray());
-        // VectorGraphicsEncoder.saveVectorGraphic(chart, rootOutput.resolve("times.pdf").toAbsolutePath().toString(),
-        //     VectorGraphicsFormat.PDF);
     }
 }

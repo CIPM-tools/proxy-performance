@@ -32,6 +32,13 @@ public final class ProxyResolutionUtility {
 
     public static final int REPETITION_PROXY_RESOLUTION = 10000;
 
+	/**
+	 * Measures the performance of the proxy resolution (without loading a model).
+	 * 
+	 * @param unresolvable true if the proxy objects should be not resolvable. false otherwise.
+	 * @param outputPrefix A prefix for this execution, which is used when outputting results.
+	 * @throws IOException if something goes wrong.
+	 */
     public static void measureProxyResolution(boolean unresolvable, String outputPrefix) throws IOException {
         var rootA = ModelGenerator.createResource(URI.createURI("model://a.xmi")).root();
         var outputDir = TestUtility.OUTPUT_PATH.resolve(outputPrefix);
@@ -80,11 +87,13 @@ public final class ProxyResolutionUtility {
 	}
 
 	private static ResolutionResult executeAndMeasureProxyResolution(A root, int hierarchyLength, int repetitions, boolean unresolvable) {
+		// Create the model. Within this model, the element is searched.
 		var millis = System.currentTimeMillis();
 		var currentA = ModelGenerator.createLinearModel(root, hierarchyLength);
 		millis = System.currentTimeMillis() - millis;
 		System.out.format("Time for model creation (%d): %d ms%n", hierarchyLength, millis);
 
+		// Create the proxy object.
 		var uri = EcoreUtil.getURI(currentA);
 		if (unresolvable) {
 			uri = uri.appendFragment(uri.fragment() + "a");
@@ -92,6 +101,7 @@ public final class ProxyResolutionUtility {
 		var proxyA = ProxyFactory.eINSTANCE.createA();
 		((MinimalEObjectImpl) proxyA).eSetProxyURI(uri);
 
+		// Resolve the proxy object, and measure the performance.
 		double[] resolutionTimes = new double[repetitions];
 		for (var idx = 0; idx < repetitions; idx++) {
 			root.setProxyNoCon(proxyA);

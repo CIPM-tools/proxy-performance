@@ -20,6 +20,10 @@ import proxy.test.utility.ChartsUtility;
 import proxy.test.utility.ModelGenerator;
 import proxy.test.utility.TestUtility;
 
+/**
+ * This experiment measures the performance of a proxy object's resolution when a model file needs
+ * to be loaded and the element is searched within the loaded model.
+ */
 public class CombinedResolutionExperiment {
     private static final int REPETITION_COMBINED_RESOLUTION = 100;
 
@@ -37,10 +41,12 @@ public class CombinedResolutionExperiment {
 		ModelLoadResult[] result = new ModelLoadResult[levels.length];
         var resolutionContainer = ModelGenerator.createResource(URI.createURI("model://ac.xmi"));
 
+		// Iterate over each level. A level determines the model size.
 		for (int idx = 0; idx < levels.length; idx++) {
 			long noElements = ModelGenerator.calculateNumberOfElements(levels[idx]);
 			System.out.format("Starting with %d elements.%n", noElements);
 
+			// First, create a new model, and save it.
 			var resourceContainer = ModelGenerator.createResource(
                 URI.createFileURI(outputDir.resolve("ac-" + noElements + ".xmi").toString()));
 			var lastElement = ModelGenerator.createExponentiallyGrowingModel(resourceContainer.root(), levels[idx]);
@@ -49,17 +55,22 @@ public class CombinedResolutionExperiment {
 			res.save(null);
 			long fileSize = Files.size(Paths.get(res.getURI().toFileString()));
 
+			// Create a proxy object pointing to the deepest element within the previously created model.
 			var proxyA = ProxyFactory.eINSTANCE.createA();
             ((InternalEObject) proxyA).eSetProxyURI(EcoreUtil.getURI(lastElement));
 
 			double[] times = new double[REPETITION_COMBINED_RESOLUTION];
 
+			// Perform the actual measurements.
 			for (int repetition = 0; repetition < times.length; repetition++) {
 				System.out.format("Repetition %d (%d elements) of combined resolution.%n", repetition, noElements);
+				// Unload the model first. This ensures that it must be loaded again.
 				res.unload();
                 resolutionContainer.root().setProxyNoCon(proxyA);
 
 				long nanos = System.nanoTime();
+				// By accessing the proxy object, it is resolved
+				// (i.e., the other model is loaded, and the element is searched within the loaded model).
 				var resolved = resolutionContainer.root().getProxyNoCon();
 				times[repetition] = System.nanoTime() - nanos;
                 assertFalse(resolved.eIsProxy());
@@ -68,6 +79,7 @@ public class CombinedResolutionExperiment {
 			result[idx] = new ModelLoadResult(levels[idx], noElements, fileSize, times);
 		}
 
+		// Save the results.
 		Files.writeString(outputDir.resolve("combined-resolution.json"), new Gson().toJson(result));
         ChartsUtility.createChartsForModelLoadResult(result, outputDir);
 	}

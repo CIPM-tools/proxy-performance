@@ -21,6 +21,9 @@ import com.google.gson.Gson;
 import proxy.test.utility.ModelGenerator;
 import proxy.test.utility.TestUtility;
 
+/**
+ * This experiment measures the performance of two getters for references: one with and one without a check for proxy objects.
+ */
 public class NoProxyExperiment {
 	private static record NoProxyResolutionResult(double[] noProxyTimes, double[] proxyTimes) {};
 
