@@ -8,7 +8,7 @@
 	<parent>
         <groupId>tools.cipm</groupId>
         <artifactId>proxy.parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>proxy.test</artifactId>
@@ -20,7 +20,7 @@
         <dependency>
             <groupId>tools.cipm</groupId>
             <artifactId>proxy.model</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.emf</groupId>
